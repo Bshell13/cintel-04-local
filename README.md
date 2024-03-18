@@ -10,7 +10,7 @@ py -m venv .venv
 ### Installing Exteral Libraries
 ```shell
 py -m pip install 'input list of libraries with out quotes'
-py -m pip freeze < requirements.txt
+py -m pip freeze > requirements.txt
 ```
 List of External Libraries<br>
 -  altair
