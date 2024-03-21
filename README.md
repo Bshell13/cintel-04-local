@@ -23,3 +23,8 @@ List of External Libraries<br>
 -  shiny
 -  shinylive
 -  shinywidgets
+
+### Running Shiny Program
+```shell
+shiny run --reload --launch-browser "name of script file"
+```

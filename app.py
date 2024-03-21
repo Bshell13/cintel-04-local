@@ -39,22 +39,22 @@ with ui.sidebar(open="open"):
         target="_blank",
     )
 
-with ui.accordion(id="acc", open="closed"):
-    with ui.accordion_panel("Data Table"):
-
+with ui.layout_columns():
+    with ui.card():
+        "Data Table"
         @render.data_frame
         def penguin_datatable():
             return render.DataTable(filtered_data())
 
-    with ui.accordion_panel("Data Grid"):
-
+    with ui.card():
+        "Data Grid"
         @render.data_frame
         def penguin_datagrid():
             return render.DataGrid(filtered_data())
 
 
-with ui.navset_card_tab(id="tab"):
-    with ui.nav_panel("Plotly Histogram"):
+with ui.layout_columns():
+    with ui.card():
 
         @render_plotly
         def plotly_histogram():
@@ -70,7 +70,7 @@ with ui.navset_card_tab(id="tab"):
             )
             return plotly_hist
 
-    with ui.nav_panel("Seaborn Histogram"):
+    with ui.card():
 
         @render.plot
         def seaborn_histogram():
@@ -83,23 +83,23 @@ with ui.navset_card_tab(id="tab"):
             seaborn_hist.set_xlabel("Selected Attribute")
             seaborn_hist.set_ylabel("Count")
 
-    with ui.nav_panel("Plotly Scatterplot"):
-        ui.card_header("Plotly Scatterplot: Species")
+with ui.card():
+    ui.card_header("Plotly Scatterplot: Species")
 
-        @render_plotly
-        def plotly_scatterplot():
-            plotly_scatter = px.scatter(
-                filtered_data(),
-                x="bill_depth_mm",
-                y="bill_length_mm",
-                color="species",
-                size_max=8,
-                labels={
-                    "bill_depth_mm": "Bill Depth (mm)",
-                    "bill_length_mm": "Bill Length(mm)",
-                },
-            )
-            return plotly_scatter
+    @render_plotly
+    def plotly_scatterplot():
+        plotly_scatter = px.scatter(
+            filtered_data(),
+            x="bill_depth_mm",
+            y="bill_length_mm",
+            color="species",
+            size_max=8,
+            labels={
+                "bill_depth_mm": "Bill Depth (mm)",
+                "bill_length_mm": "Bill Length(mm)",
+            },
+        )
+        return plotly_scatter
 
 # --------------------------------------------------------
 # Reactive calculations and effects
