@@ -1,115 +1,133 @@
-import plotly.express as px
+# Shiny imports
 from shiny.express import input, ui
+from shiny import reactive, render
+from shinyswatch import theme
 from shinywidgets import render_plotly
-from palmerpenguins import load_penguins
-from shiny import reactive, render, req
-import seaborn as sns
+
+# Python imports
 import pandas as pd
+import plotly.express as px
+from scipy import stats
+from pathlib import Path
+import statistics as stat
 
-# Use the built-in function to load the Palmer Penguins dataset
-penguins_df = load_penguins()
+from faicons import icon_svg
 
-ui.page_opts(title="Shellenberger Penguin Data", fillable=True)
-with ui.sidebar(open="open"):
-    ui.h2("Sidebar")
-    ui.input_selectize(
-        "selected_attribute",
-        "Select Attribute",
-        ["bill_length_mm", "bill_depth_mm", "flipper_length_mm", "body_mass_g"],
-    )
+
+ui.page_opts(title="PLC+ Math Group 2: Effort Tracker", fillable=True)
+
+with ui.sidebar():
     ui.input_checkbox_group(
-        "selected_species_list",
-        "Select Species",
-        ["Adelie", "Gentoo", "Chinstrap"],
-        selected=["Adelie"],
-        inline=True,
+        "teacher",
+        "Teacher",
+        {
+            "beckley": "Beckley",
+            "bergmann": "Bergmann",
+            "kear": "Kear",
+            "kueser": "Kueser",
+            "mcnaney": "McNaney",
+            "shellenberger": "Shellenberger",
+            "shephard": "Shephard",
+        },
+        selected=[
+            "beckley",
+        ]
     )
-    ui.input_numeric("plotly_bin_count", "Plotly Bin Count", 30)
-    ui.input_slider(
-        "seaborn_bin_count",
-        "Seaborn Bin Count",
-        1,
-        100,
-        20,
-    )
-    ui.hr()
-    ui.a(
-        "GitHub",
-        href="https://github.com/Bshell13/cintel-02-data",
-        target="_blank",
-    )
+
+
+# Fetching data
+
+file = Path(__file__).parent / "effort_tracker.csv"
+df = pd.read_csv(file)
+
+# Adding a column for average of each record
+df["avg_on_task"] = (1 - (
+        df[["min_1", "min_2", "min_3", "min_4", "min_5"]].mean(axis=1)
+        / df["total_students"])) * 100
 
 with ui.layout_columns():
-    with ui.card():
-        "Data Table"
-        @render.data_frame
-        def penguin_datatable():
-            return render.DataTable(filtered_data())
+    with ui.value_box(
+        showcase=icon_svg("school"),
+        theme="bg-blue",
+    ):
+    
+        "Average Percent of Students On-Task"
+        # Average Number of Students recoreded On-Task.
+        @render.text
+        def display_stats():
+            data_teacher = filtered_data_teacher()
+            return f"{round(data_teacher['avg_on_task'].mean(),2)} %"
+    
+        "Average Total Number of Students Per Class"
+        # Average Number of Students recoreded during implementation.
+        @render.text
+        def names():
+            data_teacher = filtered_data_teacher()
+            return f"{round(data_teacher['total_students'].mean(), 0)}"
 
     with ui.card():
-        "Data Grid"
-        @render.data_frame
-        def penguin_datagrid():
-            return render.DataGrid(filtered_data())
+        ui.card_header("Week")
 
-
-with ui.layout_columns():
-    with ui.card():
-
+        # Render bar plot of percent on task students per week
         @render_plotly
-        def plotly_histogram():
-            plotly_hist = px.histogram(
-                data_frame=filtered_data(),
-                x=input.selected_attribute(),
-                nbins=input.plotly_bin_count(),
-                color="species",
-            ).update_layout(
-                title="Plotly Penguins Data",
-                xaxis_title="Selected Attribute",
-                yaxis_title="Count",
+        def week_plotly():
+            plotly_week = px.line(
+                filtered_data_teacher(),
+                x=sorted(df["week_num"].unique()),
+                y=df.groupby(["week_num"])["avg_on_task"].mean()
             )
-            return plotly_hist
+            plotly_week.update_layout(
+                xaxis_title="Week",
+                yaxis_title="Average Students on Task (%)"
+            )
+            plotly_week.update_traces(
+                marker_color='dodgerblue'
+            )
+            return plotly_week
+
+with ui.layout_columns():
+    with ui.card():
+        ui.card_header("Block")
+
+        # Render bar plot of percent on task students per block
+        @render_plotly
+        def block_plotly():
+            plotly_block = px.bar(
+                filtered_data_teacher(),
+                x=sorted(df["block"].unique()),
+                y=df.groupby(["block"])["avg_on_task"].mean(),
+            )
+            plotly_block.update_layout(
+                xaxis_title="Block",
+                yaxis_title="Average Students on Task (%)"
+            )
+            plotly_block.update_traces(
+                marker_color='dodgerblue'
+            )
+            return plotly_block
 
     with ui.card():
+        ui.card_header("Task")
 
-        @render.plot
-        def seaborn_histogram():
-            seaborn_hist = sns.histplot(
-                data=filtered_data(),
-                x=input.selected_attribute(),
-                bins=input.seaborn_bin_count(),
+        # Render bar plot of percent on task students per task
+        @render_plotly
+        def task_plotly():
+            plotly_task = px.bar(
+                filtered_data_teacher(),
+                x=sorted(df["task"].unique()),
+                y=df.groupby(["task"])["avg_on_task"].mean(),
             )
-            seaborn_hist.set_title("Seaborn Penguin Data")
-            seaborn_hist.set_xlabel("Selected Attribute")
-            seaborn_hist.set_ylabel("Count")
+            plotly_task.update_layout(
+                xaxis_title="Task",
+                yaxis_title="Average Students on Task (%)"
+            )
+            plotly_task.update_traces(
+                marker_color='dodgerblue'
+            )
+            return plotly_task
 
-with ui.card():
-    ui.card_header("Plotly Scatterplot: Species")
 
-    @render_plotly
-    def plotly_scatterplot():
-        plotly_scatter = px.scatter(
-            filtered_data(),
-            x="bill_depth_mm",
-            y="bill_length_mm",
-            color="species",
-            size_max=8,
-            labels={
-                "bill_depth_mm": "Bill Depth (mm)",
-                "bill_length_mm": "Bill Length(mm)",
-            },
-        )
-        return plotly_scatter
-
-# --------------------------------------------------------
-# Reactive calculations and effects
-# --------------------------------------------------------
-
-# Add a reactive calculation to filter the data
-# By decorating the function with @reactive, we can use the function to filter the data
-# The function will be called whenever an input functions used to generate that output changes.
-# Any output that depends on the reactive function (e.g., filtered_data()) will be updated when the data changes.
 
 @reactive.calc
-def filtered_data():
-    return penguins_df[penguins_df["species"].isin(input.selected_species_list())]
+def filtered_data_teacher():
+    return df[df["teacher"].isin(input.teacher())]
